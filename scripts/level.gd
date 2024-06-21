@@ -1,12 +1,20 @@
 extends Node2D
 
-@onready var start_position = $StartPosition
-@onready var player = $Player
+@export var next_level: PackedScene = null
+
+@onready var start = $Start
+@onready var exit = $Exit
+var player = null
 
 func _ready():
+	player = get_tree().get_first_node_in_group("player")
+	if player != null:
+		player.global_position = start.get_spawn_pos()
 	var traps = get_tree().get_nodes_in_group("traps")
 	for trap in traps:
 		trap.touched_player.connect(_on_trap_touched_player)
+		
+	exit.body_entered.connect(_on_exit_body_entered)
 
 func _process(delta):
 	if Input.is_action_just_pressed("quit"):
@@ -22,4 +30,12 @@ func _on_trap_touched_player():
 
 func reset_player():
 	player.velocity = Vector2.ZERO
-	player.global_position = start_position.global_position
+	player.global_position = start.get_spawn_pos()
+	
+func _on_exit_body_entered(body):
+	if body is Player:
+		if next_level!=null:
+			exit.animate()
+			player.active = false
+			await get_tree().create_timer(1.5).timeout
+			get_tree().change_scene_to_packed(next_level)
